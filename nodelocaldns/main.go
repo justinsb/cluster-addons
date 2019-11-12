@@ -23,8 +23,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-	addonsv1alpha1 "sigs.k8s.io/addon-operators/api/v1alpha1"
-	"sigs.k8s.io/addon-operators/controllers"
+	addonsv1alpha1 "sigs.k8s.io/addon-operators/nodelocaldns/api/v1alpha1"
+	"sigs.k8s.io/addon-operators/nodelocaldns/controllers"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	// +kubebuilder:scaffold:imports
@@ -67,7 +67,6 @@ func main() {
 
 	if err = (&controllers.NodeLocalDNSReconciler{
 		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("NodeLocalDNS"),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "NodeLocalDNS")

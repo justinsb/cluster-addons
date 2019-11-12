@@ -25,7 +25,7 @@ import (
 
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
-	addonsv1alpha1 "sigs.k8s.io/addon-operators/api/v1alpha1"
+	addonsv1alpha1 "sigs.k8s.io/addon-operators/nodelocaldns/api/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
