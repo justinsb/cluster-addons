@@ -1,0 +1,7 @@
+version: "2"
+domain: k8s.io
+repo: sigs.k8s.io/addon-operators
+resources:
+- group: addons
+  version: v1alpha1
+  kind: NodeLocalDNS
