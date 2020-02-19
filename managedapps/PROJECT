@@ -1,0 +1,7 @@
+domain: k8s.io
+repo: sigs.k8s.io/addon-operators
+resources:
+- group: app
+  kind: ClusterManagedApplication
+  version: v1alpha1
+version: "2"
