@@ -5,24 +5,17 @@ import (
 	addonv1alpha1 "sigs.k8s.io/kubebuilder-declarative-pattern/pkg/patterns/addon/pkg/apis/v1alpha1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
 // ClusterManagedApplicationSpec defines the desired state of ClusterManagedApplication
 type ClusterManagedApplicationSpec struct {
 	addonv1alpha1.CommonSpec `json:",inline"`
 	addonv1alpha1.PatchSpec  `json:",inline"`
 
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	Package string `json:"package,omitempty"`
 }
 
 // ClusterManagedApplicationStatus defines the observed state of ClusterManagedApplication
 type ClusterManagedApplicationStatus struct {
 	addonv1alpha1.CommonStatus `json:",inline"`
-
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
 }
 
 // +kubebuilder:object:root=true
@@ -40,7 +33,7 @@ type ClusterManagedApplication struct {
 var _ addonv1alpha1.CommonObject = &ClusterManagedApplication{}
 
 func (o *ClusterManagedApplication) ComponentName() string {
-	return "clustermanagedapplication"
+	return o.Spec.Package
 }
 
 func (o *ClusterManagedApplication) CommonSpec() addonv1alpha1.CommonSpec {

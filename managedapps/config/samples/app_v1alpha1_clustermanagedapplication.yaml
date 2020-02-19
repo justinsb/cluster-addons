@@ -1,7 +1,7 @@
 apiVersion: app.k8s.io/v1alpha1
 kind: ClusterManagedApplication
 metadata:
-  name: clustermanagedapplication-sample
+  name: example1
 spec:
-  # Add fields here
-  foo: bar
+  package: example1
+  version: 0.0.1

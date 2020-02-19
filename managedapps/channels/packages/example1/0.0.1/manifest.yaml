@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: example1
+  labels:
+    version: "0.0.1"
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: example1
+  namespace: example1
+data:
+  info: "This is version 0.0.1"
