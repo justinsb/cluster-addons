@@ -45,8 +45,8 @@ func (r *ClusterManagedApplicationReconciler) SetupWithManager(mgr ctrl.Manager)
 		declarative.WithOwner(declarative.SourceAsOwner),
 		declarative.WithLabels(watchLabels),
 		declarative.WithStatus(status.NewBasic(mgr.GetClient())),
-		// TODO: add an application to your manifest:  declarative.WithObjectTransform(addon.TransformApplicationFromStatus),
-		// TODO: add an application to your manifest:  declarative.WithManagedApplication(watchLabels),
+		declarative.WithObjectTransform(addon.TransformApplicationFromStatus),
+		declarative.WithManagedApplication(watchLabels),
 		declarative.WithObjectTransform(addon.ApplyPatches),
 	); err != nil {
 		return err
