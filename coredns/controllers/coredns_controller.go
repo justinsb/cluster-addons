@@ -79,6 +79,7 @@ func (r *CoreDNSReconciler) setupReconciler(mgr ctrl.Manager) error {
 		var corefile string
 
 		o := object.(*api.CoreDNS)
+
 		if o.Spec.Corefile == "" {
 			corefile, err = getCorefile(ctx, mgr.GetClient())
 			if err != nil {
@@ -95,7 +96,12 @@ func (r *CoreDNSReconciler) setupReconciler(mgr ctrl.Manager) error {
 
 		// Usually returns an empty Corefile if the Corefile is default.
 		if corefile == "" {
-			corefilePath := fmt.Sprintf("channels/packages/coredns/%s/Corefile", o.Spec.Version)
+			version := o.Spec.Version
+			if version == "" {
+				// HACK: workaround for when version not specified
+				version = "1.6.7"
+			}
+			corefilePath := fmt.Sprintf("channels/packages/coredns/%s/Corefile", version)
 			b, err := ioutil.ReadFile(corefilePath)
 			if err != nil {
 				return "", err

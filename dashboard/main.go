@@ -27,6 +27,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/kubebuilder-declarative-pattern/pkg/patterns/addon"
+	intercept "sigs.k8s.io/kubebuilder-intercept"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -56,7 +57,7 @@ func main() {
 
 	addon.Init()
 
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+	mgr, err := intercept.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: metricsAddr,
 		LeaderElection:     enableLeaderElection,
