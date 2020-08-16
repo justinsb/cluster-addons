@@ -99,7 +99,7 @@ func (r *CoreDNSReconciler) setupReconciler(mgr ctrl.Manager) error {
 			version := o.Spec.Version
 			if version == "" {
 				// HACK: workaround for when version not specified
-				version = "1.6.7"
+				version = "1.7.0"
 			}
 			corefilePath := fmt.Sprintf("channels/packages/coredns/%s/Corefile", version)
 			b, err := ioutil.ReadFile(corefilePath)
