@@ -6,8 +6,8 @@ resources:
   - service.yaml
   - deployment.yaml
   - serviceaccount.yaml
-  - clusterrole.yaml
-  - clusterrolebinding.yaml
+#  - clusterrole.yaml
+#  - clusterrolebinding.yaml
 
 configMapGenerator:
   - name: coredns
