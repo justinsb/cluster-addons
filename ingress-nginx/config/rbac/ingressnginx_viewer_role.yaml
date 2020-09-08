@@ -1,0 +1,20 @@
+# permissions for end users to view ingressnginxes.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ingressnginx-viewer-role
+rules:
+- apiGroups:
+  - addons.x-k8s.io
+  resources:
+  - ingressnginxes
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - addons.x-k8s.io
+  resources:
+  - ingressnginxes/status
+  verbs:
+  - get

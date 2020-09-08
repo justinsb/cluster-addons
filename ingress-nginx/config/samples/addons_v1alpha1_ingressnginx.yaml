@@ -1,0 +1,8 @@
+apiVersion: addons.x-k8s.io/v1alpha1
+kind: IngressNginx
+metadata:
+  name: default
+  namespace: ingress-nginx
+spec:
+  # Add fields here
+  foo: bar
