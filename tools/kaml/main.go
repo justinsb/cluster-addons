@@ -36,8 +36,10 @@ func BuildRootCommand() *cobra.Command {
 	rootCmd.SilenceErrors = true
 
 	cmd.BuildAddLabelsCommand(rootCmd)
+	cmd.BuildFilterCommand(rootCmd)
 	cmd.BuildRemoveAnnotationsCommand(rootCmd)
 	cmd.BuildRemoveLabelsCommand(rootCmd)
+	cmd.BuildRemoveNamespaceCommand(rootCmd)
 
 	return rootCmd
 }

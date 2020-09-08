@@ -7,10 +7,13 @@ import (
 
 	"sigs.k8s.io/kustomize/kyaml/kio"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
+
+	"sigs.k8s.io/cluster-addons/tools/kaml/pkg/xform"
 )
 
 type standardCommandOptions struct {
-	Filters []yaml.Filter
+	Filters  []yaml.Filter
+	Matchers []xform.Matcher
 }
 
 func runStandardCommand(ctx context.Context, options standardCommandOptions) error {
@@ -24,16 +27,31 @@ func runStandardCommand(ctx context.Context, options standardCommandOptions) err
 		return fmt.Errorf("failed to parse yaml: %w", err)
 	}
 
-	var filtered []*yaml.RNode
+	var out []*yaml.RNode
 	for _, obj := range nodes {
 		_, err = obj.Pipe(options.Filters...)
 		if err != nil {
 			return err
 		}
-		filtered = append(filtered, obj)
+		out = append(out, obj)
 	}
 
-	if err := io.Write(filtered); err != nil {
+	for _, matcher := range options.Matchers {
+		var matching []*yaml.RNode
+
+		for _, obj := range out {
+			match, err := matcher(obj)
+			if err != nil {
+				return err
+			}
+			if match {
+				matching = append(matching, obj)
+			}
+		}
+		out = matching
+	}
+
+	if err := io.Write(out); err != nil {
 		return err
 	}
 	return nil
