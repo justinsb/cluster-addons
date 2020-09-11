@@ -44,7 +44,7 @@ type IngressNginxReconciler struct {
 	declarative.Reconciler
 }
 
-// +kubebuilder:rbac:groups=addons.x-k8s.io,resources=ingressnginxes,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=addons.x-k8s.io,resources=ingressnginxes,verbs=get;list;watch
 // +kubebuilder:rbac:groups=addons.x-k8s.io,resources=ingressnginxes/status,verbs=get;update;patch
 
 func (r *IngressNginxReconciler) SetupWithManager(mgr ctrl.Manager) error {

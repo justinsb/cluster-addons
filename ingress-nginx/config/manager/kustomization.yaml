@@ -1,2 +1,9 @@
 resources:
-- manager.yaml
+#- manager.yaml
+- statefulset.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+images:
+- name: controller
+  newName: justinsb/clusteraddon-ingress-nginx
+  newTag: latest
