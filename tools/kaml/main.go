@@ -40,6 +40,7 @@ func BuildRootCommand() *cobra.Command {
 	cmd.BuildRemoveAnnotationsCommand(rootCmd)
 	cmd.BuildRemoveLabelsCommand(rootCmd)
 	cmd.BuildRemoveNamespaceCommand(rootCmd)
+	cmd.BuildRemoveVolumesCommand(rootCmd)
 
 	return rootCmd
 }

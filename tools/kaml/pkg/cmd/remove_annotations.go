@@ -32,7 +32,8 @@ func BuildRemoveAnnotationsCommand(parent *cobra.Command) {
 	var opt RemoveAnnotations
 
 	cmd := &cobra.Command{
-		Use: "remove-annotations",
+		Use:     "remove-annotations",
+		Aliases: []string{"remove-annotation"},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			opt.Annotations = append(opt.Annotations, args...)
 			return RunRemoveAnnotations(cmd.Context(), opt)

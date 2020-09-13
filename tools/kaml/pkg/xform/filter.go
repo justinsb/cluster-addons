@@ -5,6 +5,7 @@ import "sigs.k8s.io/kustomize/kyaml/yaml"
 type FilterOptions struct {
 	Invert bool
 	Kinds  []string
+	Names  []string
 }
 
 type Matcher func(*yaml.RNode) (bool, error)
@@ -21,6 +22,17 @@ func Filter(options FilterOptions) Matcher {
 				found := false
 				for _, kind := range options.Kinds {
 					if kind == meta.Kind {
+						found = true
+					}
+				}
+				if !found {
+					match = false
+				}
+			}
+			if len(options.Names) != 0 {
+				found := false
+				for _, name := range options.Names {
+					if name == meta.Name {
 						found = true
 					}
 				}

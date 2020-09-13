@@ -36,6 +36,7 @@ func BuildFilterCommand(parent *cobra.Command) {
 
 	cmd.Flags().BoolVarP(&opt.Invert, "invert-match", "v", opt.Invert, "select non-matching objects")
 	cmd.Flags().StringSliceVar(&opt.Kinds, "kind", opt.Kinds, "select objects of the specified kind")
+	cmd.Flags().StringSliceVar(&opt.Names, "name", opt.Names, "select objects of the specified name")
 
 	parent.AddCommand(cmd)
 }

@@ -32,7 +32,8 @@ func BuildRemoveLabelsCommand(parent *cobra.Command) {
 	var opt RemoveLabels
 
 	cmd := &cobra.Command{
-		Use: "remove-labels",
+		Use:     "remove-labels",
+		Aliases: []string{"remove-label"},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			opt.Labels = append(opt.Labels, args...)
 			return RunRemoveLabels(cmd.Context(), opt)
