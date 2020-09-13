@@ -1,0 +1,7 @@
+apiVersion: addons.x-k8s.io/v1alpha1
+kind: CalicoNetworking
+metadata:
+  name: caliconetworking-sample
+spec:
+  # Add fields here
+  foo: bar
