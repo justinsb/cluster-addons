@@ -1,0 +1,20 @@
+# permissions for end users to view ciliumnetworkings.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ciliumnetworking-viewer-role
+rules:
+- apiGroups:
+  - addons.x-k8s.io
+  resources:
+  - ciliumnetworkings
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - addons.x-k8s.io
+  resources:
+  - ciliumnetworkings/status
+  verbs:
+  - get

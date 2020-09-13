@@ -1,0 +1,9 @@
+domain: x-k8s.io
+layout: go.kubebuilder.io/v2
+projectName: cilium-networking
+repo: github.com/kubernetes-sigs/cluster-addons
+resources:
+- group: addons
+  kind: CiliumNetworking
+  version: v1alpha1
+version: 3-alpha
