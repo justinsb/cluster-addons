@@ -1,8 +1,10 @@
-# permissions for end users to edit ciliumnetworkings.
+
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: ciliumnetworking-editor-role
+  creationTimestamp: null
+  name: manager-role
 rules:
 - apiGroups:
   - addons.x-k8s.io
@@ -22,3 +24,5 @@ rules:
   - ciliumnetworkings/status
   verbs:
   - get
+  - patch
+  - update

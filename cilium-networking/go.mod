@@ -6,8 +6,9 @@ require (
 	github.com/go-logr/logr v0.1.0
 	github.com/onsi/ginkgo v1.12.1
 	github.com/onsi/gomega v1.10.1
+	golang.org/x/tools v0.0.0-20200913032122-97363e29fc9b // indirect
 	k8s.io/apimachinery v0.18.6
 	k8s.io/client-go v0.18.6
 	sigs.k8s.io/controller-runtime v0.6.2
-	sigs.k8s.io/kubebuilder-declarative-pattern v0.0.0-20200522144838-848d48e5b073
+	sigs.k8s.io/kubebuilder-declarative-pattern v0.0.0-20200816135617-dbfe418e405f
 )

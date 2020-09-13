@@ -38,7 +38,7 @@ var _ reconcile.Reconciler = &CiliumNetworkingReconciler{}
 // CiliumNetworkingReconciler reconciles a CiliumNetworking object
 type CiliumNetworkingReconciler struct {
 	client.Client
-	Log logr.Logger
+	Log    logr.Logger
 	Scheme *runtime.Scheme
 
 	declarative.Reconciler

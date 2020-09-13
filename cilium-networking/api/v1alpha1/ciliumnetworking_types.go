@@ -43,7 +43,7 @@ type CiliumNetworkingStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
- // +kubebuilder:resource:scope=Cluster 
+// +kubebuilder:resource:scope=Cluster
 
 // CiliumNetworking is the Schema for the ciliumnetworkings API
 type CiliumNetworking struct {
@@ -77,7 +77,7 @@ func (o *CiliumNetworking) SetCommonStatus(s addonv1alpha1.CommonStatus) {
 }
 
 // +kubebuilder:object:root=true
- // +kubebuilder:resource:scope=Cluster 
+// +kubebuilder:resource:scope=Cluster
 
 // CiliumNetworkingList contains a list of CiliumNetworking
 type CiliumNetworkingList struct {

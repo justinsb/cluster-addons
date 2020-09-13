@@ -1,2 +1,12 @@
+#- manager.yaml
 resources:
-- manager.yaml
+- statefulset.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+images:
+- name: controller
+  newName: justinsb/clusteraddon-cilium-networking
+  newTag: latest
+patchesStrategicMerge:
+- patches/apiserver_endpoint.patch.yaml
+- patches/tolerations_controlplane.patch.yaml
