@@ -21,8 +21,7 @@ func ParseYAMLtoRole(manifestStr, name, ns, saName string, supervisory bool) (st
 
 	clusterRole := v1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: ns,
+			Name: name,
 		},
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ClusterRole",
@@ -72,8 +71,7 @@ func ParseYAMLtoRole(manifestStr, name, ns, saName string, supervisory bool) (st
 				APIVersion: "rbac.authorization.k8s.io/v1",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Namespace: ns,
-				Name:      name + "-binding",
+				Name: name + "-binding",
 			},
 			Subjects: []v1.Subject{
 				{
