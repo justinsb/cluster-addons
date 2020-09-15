@@ -18,6 +18,9 @@ However, it requires additional RBAC permissions (on the lease object) and it co
 
 Instead, where recovery time is not critical (and where you are not in the critical path for launching a replacement Node / Pod), consider using a StatefulSet instead.
 
+Try using   podManagementPolicy: "Parallel"
+
+
 ## Don't use the SubjectAccessReview on metrics
 
 Exposing metrics is indeed suboptimal from a security point of view.  However, many clusters and addons can likely tolerate the risk.  Using the kubernetes ServiceAccountToken has its own risks, because that token is a bearer token.
