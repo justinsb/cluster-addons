@@ -43,7 +43,7 @@ type CalicoNetworkingStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
- // +kubebuilder:resource:scope=Cluster 
+// +kubebuilder:resource:scope=Cluster
 
 // CalicoNetworking is the Schema for the caliconetworkings API
 type CalicoNetworking struct {
@@ -77,7 +77,7 @@ func (o *CalicoNetworking) SetCommonStatus(s addonv1alpha1.CommonStatus) {
 }
 
 // +kubebuilder:object:root=true
- // +kubebuilder:resource:scope=Cluster 
+// +kubebuilder:resource:scope=Cluster
 
 // CalicoNetworkingList contains a list of CalicoNetworking
 type CalicoNetworkingList struct {

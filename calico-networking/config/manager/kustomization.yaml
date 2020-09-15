@@ -1,2 +1,12 @@
 resources:
-- manager.yaml
+- statefulset.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+images:
+- name: controller
+  newName: justinsb/clusteraddon-calico-networking
+  newTag: latest
+#- patches/apiserver_endpoint.patch.yaml
+patchesStrategicMerge:
+- patches/tolerations_controlplane.patch.yaml
+- patches/hostnetwork.patch.yaml

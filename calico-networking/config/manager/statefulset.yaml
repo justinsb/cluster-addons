@@ -6,16 +6,18 @@ metadata:
   name: system
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: controller-manager
   namespace: system
   labels:
     control-plane: controller-manager
 spec:
+  podManagementPolicy: "Parallel"
   selector:
     matchLabels:
       control-plane: controller-manager
+  serviceName: "calico-networking-controller-manager"
   replicas: 1
   template:
     metadata:
@@ -25,8 +27,8 @@ spec:
       containers:
       - command:
         - /manager
-        args:
-        - --enable-leader-election
+        #args:
+        #- --enable-leader-election
         image: controller:latest
         name: manager
         resources:

@@ -38,7 +38,7 @@ var _ reconcile.Reconciler = &CalicoNetworkingReconciler{}
 // CalicoNetworkingReconciler reconciles a CalicoNetworking object
 type CalicoNetworkingReconciler struct {
 	client.Client
-	Log logr.Logger
+	Log    logr.Logger
 	Scheme *runtime.Scheme
 
 	declarative.Reconciler
