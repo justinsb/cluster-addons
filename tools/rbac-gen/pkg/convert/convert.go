@@ -53,7 +53,7 @@ func ParseYAMLtoRole(manifestStr, name, ns, saName string, supervisory bool) (st
 				APIGroups: []string{obj.Group},
 				// needs plural of kind
 				Resources: []string{ResourceFromKind(obj.Kind)},
-				Verbs:     []string{"create", "update", "delete", "get"},
+				Verbs:     []string{"create", "update", "patch", "delete", "get"},
 			}
 			clusterRole.Rules = append(clusterRole.Rules, newRule)
 			kindMap[obj.Group+"::"+obj.Kind] = true
