@@ -38,3 +38,46 @@ TODO: Should we name them a particular way?  Should we label them a particular w
 Most operators don't / shouldn't need to write back to the spec, instead they should be writing only to status.
 
 Try to remove the create/update/patch/delete permission on the object itself.
+
+## Clean up manifests
+
+```
+rm -rf config/certmanager
+rm -rf config/prometheus
+rm -rf config/webhook
+rm -rf config/crd/patches/
+rm -rf config/crd/kustomizeconfig.yaml
+
+cat <<EOF > config/crd/kustomization.yaml
+# This kustomization.yaml is not intended to be run by itself,
+# since it depends on service name and namespace that are out of this kustomize package.
+# It should be run by config/default
+resources:
+- bases/addons.x-k8s.io_caliconetworkings.yaml
+# +kubebuilder:scaffold:crdkustomizeresource
+EOF
+
+rm -rf config/manager/default.yaml
+
+cat <<EOF > config/manager/kustomization.yaml
+resources:
+- statefulset.yaml
+EOF
+
+
+rm -rf config/rbac/auth_proxy*
+rm -rf config/rbac/leader_election*
+
+go run . --yaml ~/k8s/src/sigs.k8s.io/cluster-addons/calico-networking/channels/packages/caliconetworking/3.16.1/manifest.yaml --supervisory
+
+cat <<EOF > config/rbac/kustomization.yaml
+resources:
+- role.yaml
+- role_binding.yaml
+- deploy.yaml
+- deploy_binding.yaml
+EOF
+
+
+```
+
