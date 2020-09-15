@@ -22,14 +22,15 @@ export KUBEBUILDER_ENABLE_PLUGINS=1
 kubebuilder init --fetch-deps=false --domain=x-k8s.io --license=apache2
 
 kubebuilder create api --pattern=addon --controller=true --example=false --group=addons --kind=<my-addon> --make=false --namespaced=true --resource=true --version=v1alpha1
-
 ```
 
-2. Run go mod vendor:
+For an addon that can only be installed once per cluster, you might consider instead:
 
-```bash
-go mod vendor
 ```
+kubebuilder create api --pattern=addon --controller=true --example=false --group=addons --kind=<my-addon> --make=false --namespaced=false --resource=true --version=v1alpha1
+```
+
+TODO: vendor not needed?
 
 3. Delete the test suites that are checking whether kubebuilder is working:
 
