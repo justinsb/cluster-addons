@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    k8s-app: coredns-operator
+  name: coredns-operator
+  namespace: coredns-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      k8s-app: coredns-operator
+  template:
+    metadata:
+      labels:
+        k8s-app: coredns-operator
+    spec:
+      containers:
+      - args:
+        - --enable-leader-election=false
+        command:
+        - /manager
+        image: controller:latest
+        name: manager
+        resources:
+          limits:
+            cpu: 100m
+            # TODO: Switch to not exec kubectl, reduce memory
+            memory: 100Mi
+          requests:
+            cpu: 100m
+            # TODO: Switch to not exec kubectl, reduce memory
+            memory: 100Mi
+      serviceAccountName: coredns-operator
+      terminationGracePeriodSeconds: 10

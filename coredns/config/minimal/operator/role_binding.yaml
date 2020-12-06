@@ -1,0 +1,14 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    k8s-app: coredns-operator
+  name: coredns-system:coredns-operator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: coredns-operator
+subjects:
+- kind: ServiceAccount
+  name: coredns-operator
+  namespace: coredns-system

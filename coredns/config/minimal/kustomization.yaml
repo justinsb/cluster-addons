@@ -1,0 +1,6 @@
+bases:
+- operator
+- precreate-rbac
+
+resources:
+- namespace.yaml
