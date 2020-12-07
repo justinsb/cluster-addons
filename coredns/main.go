@@ -17,7 +17,9 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
+	"fmt"
 	"os"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -25,9 +27,12 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	addonsv1alpha1 "sigs.k8s.io/cluster-addons/coredns/api/v1alpha1"
 	"sigs.k8s.io/cluster-addons/coredns/controllers"
+	"sigs.k8s.io/cluster-addons/coredns/dryrun"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/kubebuilder-declarative-pattern/pkg/patterns/addon"
+	"sigs.k8s.io/kubebuilder-declarative-pattern/pkg/patterns/declarative"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -54,10 +59,36 @@ func main() {
 	rbacMode := "reconcile"
 	flag.StringVar(&rbacMode, "rbac-mode", rbacMode, "The mode to use for RBAC reconciliation.")
 
+	dryRun := false
+	flag.BoolVar(&dryRun, "dry-run", dryRun, "If set, will take an object on stdin and generate a manifest on stdout")
+
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
 	addon.Init()
+
+	if dryRun {
+		reconcilerFactory := func(ctx context.Context, mgr manager.Manager, obj declarative.DeclarativeObject) (*declarative.Reconciler, error) {
+			kind := obj.GetObjectKind().GroupVersionKind().Kind
+			switch kind {
+			case "CoreDNS":
+				r := &controllers.CoreDNSReconciler{
+					Client: mgr.GetClient(),
+				}
+				if err := r.SetupReconciler(mgr); err != nil {
+					return nil, fmt.Errorf("error building reconciler: %w", err)
+				}
+				return &r.Reconciler, nil
+			}
+
+			return nil, fmt.Errorf("unknown kind %v", kind)
+		}
+		if err := dryrun.DoDryRun(context.Background(), scheme, reconcilerFactory); err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
