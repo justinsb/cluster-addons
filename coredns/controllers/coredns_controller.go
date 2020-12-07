@@ -42,9 +42,11 @@ var _ reconcile.Reconciler = &CoreDNSReconciler{}
 
 // CoreDNSReconciler reconciles a CoreDNS object
 type CoreDNSReconciler struct {
-	Client      client.Client
-	Log         logr.Logger
-	Scheme      *runtime.Scheme
+	Client   client.Client
+	Log      logr.Logger
+	Scheme   *runtime.Scheme
+	RBACMode string
+
 	watchLabels declarative.LabelMaker
 
 	declarative.Reconciler
@@ -111,11 +113,56 @@ func (r *CoreDNSReconciler) setupReconciler(mgr ctrl.Manager) error {
 		return s, nil
 	}
 
+	rbacModeTransform := func(ctx context.Context, object declarative.DeclarativeObject, objects *manifest.Objects) error {
+		// j, _ := objects.JSONManifest()
+		// fmt.Printf("objects: %v\n", j)
+
+		// isBeforeKustomize := false
+		// for _, obj := range objects.Items {
+		// 	fmt.Printf("groupkind: %v\n", obj.GroupKind())
+		// 	if obj.GroupKind().Group == "kustomize.config.k8s.io" && obj.GroupKind().Kind == "Kustomization" {
+		// 		isBeforeKustomize = true
+		// 	}
+		// }
+		// fmt.Printf("isBeforeKustomize: %v\n", isBeforeKustomize)
+		// // We can't remove objects until after kustomize has run; we actually will get called again!
+		// // TODO: Clean this up ... most of these transforms should only run after kustomize
+		// if isBeforeKustomize {
+		// 	return nil
+		// }
+
+		switch r.RBACMode {
+		case "reconcile", "":
+			return nil
+
+		case "ignore":
+			var keepItems []*manifest.Object
+			for _, obj := range objects.Items {
+				keep := true
+				if obj.GroupKind().Group == "rbac.authorization.k8s.io" {
+					switch obj.GroupKind().Kind {
+					case "ClusterRole", "ClusterRoleBinding", "Role", "RoleBinding":
+						keep = false
+					}
+				}
+				if keep {
+					keepItems = append(keepItems, obj)
+				}
+			}
+			objects.Items = keepItems
+			return nil
+
+		default:
+			return fmt.Errorf("unknown rbac mode %q", r.RBACMode)
+		}
+	}
+
 	r.watchLabels = declarative.SourceLabel(mgr.GetScheme())
 
 	return r.Reconciler.Init(mgr, &api.CoreDNS{},
 		declarative.WithRawManifestOperation(replaceCorefilePlaceholder),
 		declarative.WithRawManifestOperation(replacePlaceholders),
+		declarative.WithObjectTransform(rbacModeTransform),
 		declarative.WithObjectTransform(declarative.AddLabels(labels)),
 		declarative.WithOwner(declarative.SourceAsOwner),
 		declarative.WithLabels(r.watchLabels),

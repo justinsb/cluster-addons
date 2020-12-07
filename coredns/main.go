@@ -50,6 +50,10 @@ func main() {
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+
+	rbacMode := "reconcile"
+	flag.StringVar(&rbacMode, "rbac-mode", rbacMode, "The mode to use for RBAC reconciliation.")
+
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
@@ -68,9 +72,10 @@ func main() {
 	}
 
 	if err = (&controllers.CoreDNSReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("CoreDNS"),
-		Scheme: mgr.GetScheme(),
+		Client:   mgr.GetClient(),
+		Log:      ctrl.Log.WithName("controllers").WithName("CoreDNS"),
+		Scheme:   mgr.GetScheme(),
+		RBACMode: rbacMode,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "CoreDNS")
 		os.Exit(1)

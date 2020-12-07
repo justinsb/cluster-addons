@@ -18,6 +18,7 @@ spec:
       containers:
       - args:
         - --enable-leader-election=false
+        - --rbac-mode=ignore
         command:
         - /manager
         image: controller:latest
