@@ -52,7 +52,7 @@ type CoreDNSReconciler struct {
 	declarative.Reconciler
 }
 
-func (r *CoreDNSReconciler) setupReconciler(mgr ctrl.Manager) error {
+func (r *CoreDNSReconciler) SetupReconciler(mgr ctrl.Manager) error {
 	labels := map[string]string{
 		"k8s-app": "kube-dns",
 	}
@@ -181,7 +181,7 @@ func (r *CoreDNSReconciler) setupReconciler(mgr ctrl.Manager) error {
 // +kubebuilder:rbac:groups=addons.x-k8s.io,resources=coredns/status,verbs=get;update;patch
 
 func (r *CoreDNSReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	if err := r.setupReconciler(mgr); err != nil {
+	if err := r.SetupReconciler(mgr); err != nil {
 		return err
 	}
 

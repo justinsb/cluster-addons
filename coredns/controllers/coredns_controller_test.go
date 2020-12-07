@@ -48,7 +48,7 @@ func TestCoreDNS(t *testing.T) {
 	dr := &CoreDNSReconciler{
 		Client: v.Manager().GetClient(),
 	}
-	err = dr.setupReconciler(v.Manager())
+	err = dr.SetupReconciler(v.Manager())
 	if err != nil {
 		t.Fatalf("creating reconciler: %v", err)
 	}
