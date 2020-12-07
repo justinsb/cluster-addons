@@ -32,7 +32,8 @@ RUN chmod -R a=rX /channels/
 FROM gcr.io/distroless/static:nonroot
 WORKDIR /
 COPY --from=builder /go/src/coredns/manager .
-COPY --from=kubectl /usr/bin/kubectl /usr/bin/kubectl
+# TODO(justinsb): We don't actually need kubectl with the latest k-d-p .. also remove from above?
+# COPY --from=kubectl /usr/bin/kubectl /usr/bin/kubectl
 COPY --from=builder /channels/ channels/
 USER nonroot:nonroot
 
