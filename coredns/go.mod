@@ -10,11 +10,12 @@ require (
 	k8s.io/apimachinery v0.19.2
 	k8s.io/client-go v0.19.2
 	k8s.io/klog v1.0.0
+	k8s.io/kubectl v0.19.2
 	sigs.k8s.io/controller-runtime v0.7.0-alpha.5
 	sigs.k8s.io/kubebuilder-declarative-pattern v0.0.0-20200512162422-ce639cbf6d4c
-	sigs.k8s.io/structured-merge-diff/v3 v3.0.0 // indirect
+	sigs.k8s.io/kustomize/api v0.3.2
 )
 
-replace sigs.k8s.io/kubebuilder-declarative-pattern => github.com/justinsb/kubebuilder-declarative-pattern v0.0.0-20201207034049-cf46f01b7432
+replace sigs.k8s.io/kubebuilder-declarative-pattern => github.com/justinsb/kubebuilder-declarative-pattern v0.0.0-20201207135810-eefed5cfa7d8
 
 //replace sigs.k8s.io/kubebuilder-declarative-pattern => ../../kubebuilder-declarative-pattern
