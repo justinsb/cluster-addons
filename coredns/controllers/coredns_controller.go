@@ -19,7 +19,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -33,6 +32,7 @@ import (
 	"sigs.k8s.io/kubebuilder-declarative-pattern/pkg/patterns/addon"
 	"sigs.k8s.io/kubebuilder-declarative-pattern/pkg/patterns/addon/pkg/status"
 	"sigs.k8s.io/kubebuilder-declarative-pattern/pkg/patterns/declarative"
+	"sigs.k8s.io/kubebuilder-declarative-pattern/pkg/patterns/declarative/pkg/manifest"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
@@ -57,7 +57,7 @@ func (r *CoreDNSReconciler) setupReconciler(mgr ctrl.Manager) error {
 		"k8s-app": "kube-dns",
 	}
 
-	replacePlaceholders := func(ctx context.Context, object declarative.DeclarativeObject, s string) (string, error) {
+	replacePlaceholders := func(ctx declarative.ManifestOperationContext, object declarative.DeclarativeObject, s string) (string, error) {
 		o := object.(*api.CoreDNS)
 
 		if o.Spec.DNSDomain == "" {
@@ -76,7 +76,7 @@ func (r *CoreDNSReconciler) setupReconciler(mgr ctrl.Manager) error {
 		return s, nil
 	}
 
-	replaceCorefilePlaceholder := func(ctx context.Context, object declarative.DeclarativeObject, s string) (string, error) {
+	replaceCorefilePlaceholder := func(ctx declarative.ManifestOperationContext, object declarative.DeclarativeObject, s string) (string, error) {
 		var err error
 		var corefile string
 
@@ -89,20 +89,24 @@ func (r *CoreDNSReconciler) setupReconciler(mgr ctrl.Manager) error {
 			o.Spec.Corefile = corefile
 		}
 
-		// Check for Corefile Migration
-		corefile, err = corefileMigration(ctx, mgr.GetClient(), o.Spec.Version, o.Spec.Corefile)
-		if err != nil {
-			return "", err
+		if o.Spec.Corefile != "" {
+			// Check for Corefile Migration
+			corefile, err = corefileMigration(ctx, mgr.GetClient(), ctx.Source().PackageVersion(), o.Spec.Corefile)
+			if err != nil {
+				return "", err
+			}
 		}
 
 		// Usually returns an empty Corefile if the Corefile is default.
 		if corefile == "" {
-			corefilePath := fmt.Sprintf("channels/packages/coredns/%s/Corefile", o.Spec.Version)
-			b, err := ioutil.ReadFile(corefilePath)
-			if err != nil {
-				return "", err
+			file, found := ctx.Source().Files()["Corefile"]
+			if !found {
+				for k := range ctx.Source().Files() {
+					fmt.Printf("file %q\n", k)
+				}
+				return "", fmt.Errorf("Corefile not found in package")
 			}
-			corefile = string(b)
+			corefile = file
 		}
 
 		corefile = strings.Replace(corefile, "{{ .DNSDomain }}", o.Spec.DNSDomain, -1)
