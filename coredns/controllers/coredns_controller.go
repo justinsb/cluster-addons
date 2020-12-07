@@ -33,6 +33,7 @@ import (
 	"sigs.k8s.io/kubebuilder-declarative-pattern/pkg/patterns/addon"
 	"sigs.k8s.io/kubebuilder-declarative-pattern/pkg/patterns/addon/pkg/status"
 	"sigs.k8s.io/kubebuilder-declarative-pattern/pkg/patterns/declarative"
+	"sigs.k8s.io/kubebuilder-declarative-pattern/pkg/patterns/declarative/pkg/manifest"
 
 	"github.com/pkg/errors"
 )
@@ -41,8 +42,10 @@ var _ reconcile.Reconciler = &CoreDNSReconciler{}
 
 // CoreDNSReconciler reconciles a CoreDNS object
 type CoreDNSReconciler struct {
-	Client      client.Client
-	Scheme      *runtime.Scheme
+	Client   client.Client
+	Scheme   *runtime.Scheme
+	RBACMode string
+
 	watchLabels declarative.LabelMaker
 
 	declarative.Reconciler
@@ -109,11 +112,39 @@ func (r *CoreDNSReconciler) setupReconciler(mgr ctrl.Manager) error {
 		return s, nil
 	}
 
+	rbacModeTransform := func(ctx context.Context, object declarative.DeclarativeObject, objects *manifest.Objects) error {
+		switch r.RBACMode {
+		case "reconcile", "":
+			return nil
+
+		case "ignore":
+			var keepItems []*manifest.Object
+			for _, obj := range objects.Items {
+				keep := true
+				if obj.GroupKind().Group == "rbac.authorization.k8s.io" {
+					switch obj.GroupKind().Kind {
+					case "ClusterRole", "ClusterRoleBinding", "Role", "RoleBinding":
+						keep = false
+					}
+				}
+				if keep {
+					keepItems = append(keepItems, obj)
+				}
+			}
+			objects.Items = keepItems
+			return nil
+
+		default:
+			return fmt.Errorf("unknown rbac mode %q", r.RBACMode)
+		}
+	}
+
 	r.watchLabels = declarative.SourceLabel(mgr.GetScheme())
 
 	return r.Reconciler.Init(mgr, &api.CoreDNS{},
 		declarative.WithRawManifestOperation(replaceCorefilePlaceholder),
 		declarative.WithRawManifestOperation(replacePlaceholders),
+		declarative.WithObjectTransform(rbacModeTransform),
 		declarative.WithObjectTransform(declarative.AddLabels(labels)),
 		declarative.WithOwner(declarative.SourceAsOwner),
 		declarative.WithLabels(r.watchLabels),
