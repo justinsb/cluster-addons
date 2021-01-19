@@ -14,6 +14,7 @@ import (
 
 func main() {
 	ctx := context.Background()
+	fmt.Fprintf(os.Stderr, "Hello %q\n", os.Getenv("EXEC_KRM_FUNCTION"))
 	if cmd := os.Getenv("EXEC_KRM_FUNCTION"); cmd != "" {
 		if err := runKrmFunction(ctx, cmd); err != nil {
 			fmt.Fprintf(os.Stderr, "unexpected error: %v\n", err)

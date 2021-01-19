@@ -1,4 +1,4 @@
 ARG BASE_IMAGE
 
 FROM ${BASE_IMAGE}
-ENV EXEC_KRM_FUNCTION=kaml-set-annotations
+ENV EXEC_KRM_FUNCTION=set-annotations
