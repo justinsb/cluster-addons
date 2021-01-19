@@ -41,20 +41,37 @@ func run(ctx context.Context) error {
 func runKrmFunction(ctx context.Context, commandName string) error {
 	resourceList := &framework.ResourceList{}
 
-	switch commandName {
-	case "set-annotations":
-		resourceList.FunctionConfig = &annotations.SetAnnotations{}
-
-	case "remove-labels":
-		resourceList.FunctionConfig = &labels.RemoveLabel{}
-
-	default:
-		return fmt.Errorf("unknown KRM command %q", commandName)
-	}
+	m := make(map[string]interface{})
+	resourceList.FunctionConfig = m
 
 	cmd := framework.Command(resourceList, func() error {
-		xform := resourceList.FunctionConfig.(xform.Runnable)
-		if err := xform.Run(ctx, resourceList); err != nil {
+		fmt.Fprintf(os.Stderr, "resourceList.FunctionConfig %+v\n", m)
+		// j, err := json.Marshal(m["data"])
+		// if err != nil {
+		// 	return fmt.Errorf("error marshalling json: %w", err)
+		// }
+
+		var runnable xform.Runnable
+		switch commandName {
+		case "set-annotations":
+			a := &annotations.SetAnnotations{}
+			a.Annotations = make(map[string]string)
+			for k, v := range m["data"].(map[string]interface{}) {
+				a.Annotations[k] = v.(string)
+			}
+			runnable = a
+		case "remove-labels":
+			runnable = &labels.RemoveLabel{}
+
+		default:
+			return fmt.Errorf("unknown KRM command %q", commandName)
+		}
+
+		// if err := json.Unmarshal(j, runnable); err != nil {
+		// 	return fmt.Errorf("error unmarshalling json: %w", err)
+		// }
+		fmt.Fprintf(os.Stderr, "runnable %+v\n", runnable)
+		if err := runnable.Run(ctx, resourceList); err != nil {
 			return err
 		}
 		return nil
