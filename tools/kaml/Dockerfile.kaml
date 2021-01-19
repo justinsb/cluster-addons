@@ -1,0 +1,14 @@
+ARG BUILD_BASE
+ARG DEPLOY_BASE
+
+FROM ${BUILD_BASE}
+ENV CGO_ENABLED=0
+WORKDIR /go/src/
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN go build -v -o /usr/local/bin/kaml ./
+
+FROM ${DEPLOY_BASE}
+COPY --from=0 /usr/local/bin/kaml /usr/local/bin/kaml
+CMD ["/usr/local/bin/kaml"]
