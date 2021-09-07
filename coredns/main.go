@@ -64,12 +64,13 @@ func main() {
 	ctrl.SetLogger(klogr.New())
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:                 scheme,
-		MetricsBindAddress:     metricsAddr,
-		Port:                   9443,
-		HealthProbeBindAddress: probeAddr,
-		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "f4f34b31.x-k8s.io",
+		Scheme:                     scheme,
+		MetricsBindAddress:         metricsAddr,
+		Port:                       9443,
+		HealthProbeBindAddress:     probeAddr,
+		LeaderElection:             enableLeaderElection,
+		LeaderElectionResourceLock: "leases",
+		LeaderElectionID:           "f4f34b31.x-k8s.io",
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
