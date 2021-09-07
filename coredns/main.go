@@ -70,7 +70,7 @@ func main() {
 		HealthProbeBindAddress:     probeAddr,
 		LeaderElection:             enableLeaderElection,
 		LeaderElectionResourceLock: "leases",
-		LeaderElectionID:           "f4f34b31.x-k8s.io",
+		LeaderElectionID:           "coredns.addons.x-k8s.io",
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
