@@ -15,20 +15,27 @@ Here we will take you through the most interesting parts. [Its README](https://g
 Broadly based on [kubebuilder-declarative-pattern walkthrough](https://github.com/kubernetes-sigs/kubebuilder-declarative-pattern/blob/master/docs/addon/walkthrough/README.md)
 A few differences so we can use go modules and [crane](https://github.com/google/go-containerregistry/blob/master/cmd/crane/doc/crane.md) - neither of which are required, just personal preference.
 
+1. Install kubebuilder version 3
+
+Install from the [kubebuilder release page](https://github.com/kubernetes-sigs/kubebuilder/releases), or build from source.
+
+
 1. Created with kubebuilder:
 
 ```bash
-export KUBEBUILDER_ENABLE_PLUGINS=1
-kubebuilder init --fetch-deps=false --domain=x-k8s.io --license=apache2
+#export KUBEBUILDER_ENABLE_PLUGINS=1
+#kubebuilder init --fetch-deps=false --domain=x-k8s.io --license=apache2
+kubebuilder init --domain kope.io --license apache2 --plugins declarative.go.kubebuilder.io/v1,go/v3 --project-version=3 --repo kope.io/networking/operator
 
-kubebuilder create api --pattern=addon --controller=true --example=false --group=addons --kind=<my-addon> --make=false --namespaced=true --resource=true --version=v1alpha1
+#kubebuilder create api --pattern=addon --controller=true --example=false --group=addons --kind=<my-addon> --make=false --namespaced=true --resource=true --version=v1alpha1
+kubebuilder create api --controller=true --group=addons --kind=Networking --namespaced=false --resource=true --version=v1alpha1 --plugins go/v3,declarative.go.kubebuilder.io/v1
 
 ```
 
 2. Run go mod vendor:
 
 ```bash
-go mod vendor
+#go mod vendor
 ```
 
 3. Delete the test suites that are checking whether kubebuilder is working:
@@ -41,7 +48,7 @@ find . -name "*_test.go" -delete
 
 ```bash
 git add .
-git reset HEAD vendor
+#git reset HEAD vendor
 git commit -m "Initial addon scaffolding"
 ```
 
@@ -68,13 +75,61 @@ EOF
 
 7. Generally follow the [main instructions](https://github.com/kubernetes-sigs/kubebuilder-declarative-pattern/blob/master/docs/addon/walkthrough/README.md) at this point:
 
+# This is done
 * [enable the declarative pattern library in your types](https://github.com/kubernetes-sigs/kubebuilder-declarative-pattern/tree/master/docs/addon/walkthrough#adding-the-framework-into-our-types) and
+# This is done
 * [enable to declarative pattern in your controller](https://github.com/kubernetes-sigs/kubebuilder-declarative-pattern/tree/master/docs/addon/walkthrough#using-the-framework-in-the-controller)
+# Still needed!
 * finally add the [call to addon.Init](https://github.com/kubernetes-sigs/kubebuilder-declarative-pattern/tree/master/docs/addon/walkthrough#misc)
 
 Note that we intend to build these three steps into kubebuilder!
 
 Then follow the instructions for deploying onto kubernetes.
+
+
+* Add daemonset permission, specific to namespace.
+* Create minimal permissions for target, including target namespace.
+* Change `manager-role` to `kopeio-networking-operator` in Makefile
+* Run `make manifests`
+
+* Add channels directory to Dockerfile
+
+```
+# Copy the channels so we can chmod them before we go distroless
+COPY channels/ /channels/
+RUN chmod -R a=rX /channels/
+
+...
+COPY --from=builder /channels/ channels/
+```
+
+* Change name of binary to kopeio-networking-operator in Makefile & Dockerfile
+
+* Switch to docker buildx?
+
+* Add permissions to main.go
+
+// Explicit permissions for leader election
+//+kubebuilder:rbac:groups=coordination.k8s.io,namespace=kopeio-networking-system,resources=leases,verbs=get;list;watch;create;update;patch;delete
+
+// Explicit permissions for events
+//+kubebuilder:rbac:groups="",namespace=kopeio-networking-system,resources=events,verbs=create;patch
+
+* Change leader election to use lease:
+		LeaderElection:             enableLeaderElection,
+		LeaderElectionID:           "networking.addons.kope.io",
+		LeaderElectionResourceLock: "leases",
+
+* Fix makefile
+
++DOCKER_REGISTRY?=$(shell whoami)
++DOCKER_TAG?=latest
+ 
+ # Image URL to use all building/pushing image targets
+-IMG ?= controller:latest
++IMG ?= ${DOCKER_REGISTRY}/kopeio-networking-operator:${DOCKER_TAG}
++
+
 
 7. Running the operator locally:
 
