@@ -17,11 +17,16 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
+	"net/http"
+	"net/http/pprof"
 	"os"
+	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
+	"github.com/go-logr/logr"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -31,6 +36,7 @@ import (
 	"k8s.io/klog/v2/klogr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	addonsv1alpha1 "sigs.k8s.io/cluster-addons/coredns/api/v1alpha1"
 	"sigs.k8s.io/cluster-addons/coredns/controllers"
@@ -62,6 +68,9 @@ func main() {
 	rbacMode := "reconcile"
 	flag.StringVar(&rbacMode, "rbac-mode", rbacMode, "The mode to use for RBAC reconciliation.")
 
+	debugAddr := ""
+	flag.StringVar(&debugAddr, "debug-bind-address", debugAddr, "The address the debug endpoint binds to.")
+
 	klog.InitFlags(nil)
 	flag.Parse()
 
@@ -79,6 +88,13 @@ func main() {
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
+	}
+
+	if debugAddr != "" {
+		if err := mgr.Add(&debugListener{Log: mgr.GetLogger(), Address: debugAddr}); err != nil {
+			setupLog.Error(err, "unable to add debug listener")
+			os.Exit(1)
+		}
 	}
 
 	if err = (&controllers.CoreDNSReconciler{
@@ -105,4 +121,31 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
+
+type debugListener struct {
+	Address string
+	Log     logr.Logger
+}
+
+var _ manager.Runnable = &debugListener{}
+
+func (l *debugListener) Start(ctx context.Context) error {
+	mux := http.NewServeMux()
+	mux.Handle("/debug/pprof/", http.HandlerFunc(pprof.Index))
+	mux.Handle("/debug/pprof/cmdline", http.HandlerFunc(pprof.Cmdline))
+	mux.Handle("/debug/pprof/profile", http.HandlerFunc(pprof.Profile))
+	mux.Handle("/debug/pprof/symbol", http.HandlerFunc(pprof.Symbol))
+
+	server := &http.Server{
+		Addr:         l.Address,
+		Handler:      mux,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 60 * time.Second,
+	}
+
+	l.Log.Info("starting debug listener", "address", l.Address)
+
+	// TODO: Close when context closes
+	return server.ListenAndServe()
 }

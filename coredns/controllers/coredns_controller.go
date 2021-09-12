@@ -34,6 +34,7 @@ import (
 	"sigs.k8s.io/kubebuilder-declarative-pattern/pkg/patterns/addon/pkg/status"
 	"sigs.k8s.io/kubebuilder-declarative-pattern/pkg/patterns/declarative"
 	"sigs.k8s.io/kubebuilder-declarative-pattern/pkg/patterns/declarative/pkg/manifest"
+	"sigs.k8s.io/kustomize/kyaml/openapi"
 
 	"github.com/pkg/errors"
 )
@@ -64,7 +65,7 @@ func (r *CoreDNSReconciler) setupReconciler(mgr ctrl.Manager) error {
 			o.Spec.DNSDomain = domain
 		}
 		if o.Spec.DNSIP == "" {
-			ip, err := findDNSClusterIP(ctx, mgr.GetClient())
+			ip, err := findDNSClusterIP(ctx, r.Client)
 			if err != nil {
 				return "", errors.Errorf("unable to find CoreDNS IP: %v", err)
 			}
@@ -81,7 +82,7 @@ func (r *CoreDNSReconciler) setupReconciler(mgr ctrl.Manager) error {
 
 		o := object.(*api.CoreDNS)
 		if o.Spec.Corefile == "" {
-			corefile, err = getCorefile(ctx, mgr.GetClient())
+			corefile, err = getCorefile(ctx, r.Client)
 			if err != nil {
 				return "", errors.Errorf("unable to find CoreDNS Corefile: %v", err)
 			}
@@ -89,7 +90,7 @@ func (r *CoreDNSReconciler) setupReconciler(mgr ctrl.Manager) error {
 		}
 
 		// Check for Corefile Migration
-		corefile, err = corefileMigration(ctx, mgr.GetClient(), o.Spec.Version, o.Spec.Corefile)
+		corefile, err = corefileMigration(ctx, r.Client, o.Spec.Version, o.Spec.Corefile)
 		if err != nil {
 			return "", err
 		}
@@ -139,7 +140,7 @@ func (r *CoreDNSReconciler) setupReconciler(mgr ctrl.Manager) error {
 		}
 	}
 
-	r.watchLabels = declarative.SourceLabel(mgr.GetScheme())
+	r.watchLabels = declarative.SourceLabel(r.Scheme)
 
 	return r.Reconciler.Init(mgr, &api.CoreDNS{},
 		declarative.WithRawManifestOperation(replaceCorefilePlaceholder),
@@ -148,7 +149,7 @@ func (r *CoreDNSReconciler) setupReconciler(mgr ctrl.Manager) error {
 		declarative.WithObjectTransform(declarative.AddLabels(labels)),
 		declarative.WithOwner(declarative.SourceAsOwner),
 		declarative.WithLabels(r.watchLabels),
-		declarative.WithStatus(status.NewBasic(mgr.GetClient())),
+		declarative.WithStatus(status.NewBasic(r.Client)),
 		declarative.WithObjectTransform(addon.ApplyPatches),
 		declarative.WithApplyPrune(),
 		declarative.WithApplyKustomize(),
@@ -160,6 +161,8 @@ func (r *CoreDNSReconciler) setupReconciler(mgr ctrl.Manager) error {
 
 func (r *CoreDNSReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	addon.Init()
+
+	openapi.SuppressBuiltInSchemaUse()
 
 	if err := r.setupReconciler(mgr); err != nil {
 		return err
@@ -177,8 +180,12 @@ func (r *CoreDNSReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	// Watch for changes to deployed objects
-	_, err = declarative.WatchAll(mgr.GetConfig(), c, r, r.watchLabels)
-	if err != nil {
+	if _, err := declarative.WatchChildren(declarative.WatchChildrenOptions{
+		Manager:    mgr,
+		Controller: c,
+		Reconciler: r,
+		LabelMaker: r.watchLabels,
+	}); err != nil {
 		return err
 	}
 
