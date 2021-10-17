@@ -19,6 +19,9 @@ type BuildRoleOptions struct {
 	Namespace          string
 	ServiceAccountName string
 	Supervisory        bool
+
+	// CRD is the name of the CRD to generate permissions for.
+	CRD string
 }
 
 func ParseYAMLtoRole(manifestStr string, opt BuildRoleOptions) (string, error) {
