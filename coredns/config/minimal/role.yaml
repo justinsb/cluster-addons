@@ -5,6 +5,14 @@ metadata:
 rules:
 - apiGroups:
   - ""
+  resources:
+  - configmaps
+  - serviceaccounts
+  - services
+  verbs:
+  - create
+- apiGroups:
+  - ""
   resourceNames:
   - coredns
   resources:
@@ -15,58 +23,6 @@ rules:
   - delete
   - patch
   - update
-- apiGroups:
-  - ""
-  resources:
-  - configmaps
-  - serviceaccounts
-  - services
-  verbs:
-  - create
-- apiGroups:
-  - apps
-  - extensions
-  resources:
-  - deployments
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - apps
-  - extensions
-  resourceNames:
-  - coredns
-  resources:
-  - deployments
-  verbs:
-  - delete
-  - patch
-  - update
-- apiGroups:
-  - apps
-  - extensions
-  resources:
-  - deployments
-  verbs:
-  - create
-- apiGroups:
-  - ""
-  resources:
-  - events
-  verbs:
-  - create
-  - patch
-- apiGroups:
-  - ""
-  resources:
-  - configmaps
-  - serviceaccounts
-  - services
-  verbs:
-  - get
-  - list
-  - watch
 - apiGroups:
   - addons.x-k8s.io
   resources:
@@ -85,6 +41,50 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - apps
+  - extensions
+  resources:
+  - deployments
+  verbs:
+  - create
+- apiGroups:
+  - apps
+  - extensions
+  resources:
+  - deployments
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps
+  - extensions
+  resourceNames:
+  - coredns
+  resources:
+  - deployments
+  verbs:
+  - delete
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - serviceaccounts
+  - services
+  verbs:
+  - get
+  - list
+  - watch
 - apiGroups:
   - coordination.k8s.io
   resources:
