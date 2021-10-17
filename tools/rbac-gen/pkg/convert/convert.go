@@ -3,11 +3,13 @@ package convert
 import (
 	"bytes"
 	"context"
+	"sort"
 	"strings"
 
 	v1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/kubebuilder-declarative-pattern/pkg/patterns/declarative/pkg/manifest"
 	"sigs.k8s.io/yaml"
 )
@@ -67,6 +69,17 @@ func ParseYAMLtoRole(manifestStr string, opt BuildRoleOptions) (string, error) {
 			kindMap[obj.Group+"::"+obj.Kind] = true
 		}
 	}
+
+	if opt.CRD != "" {
+		gr := schema.ParseGroupResource(opt.CRD)
+
+		clusterRole.Rules = append(clusterRole.Rules, v1.PolicyRule{
+			APIGroups: []string{gr.Group},
+			Resources: []string{gr.Resource},
+		})
+	}
+
+	sort.Slice(clusterRole.Rules, func(i, j int) bool { return ruleLT(&clusterRole.Rules[i], &clusterRole.Rules[j]) })
 
 	output, err := yaml.Marshal(&clusterRole)
 	buf := bytes.NewBuffer(output)

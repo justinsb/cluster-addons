@@ -57,6 +57,7 @@ func BuildGenerateCommand(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVar(&opt.Namespace, "ns", opt.Namespace, "namespace of the role to be generated")
 	cmd.Flags().StringVar(&out, "out", out, "name of output file")
 	cmd.Flags().BoolVar(&opt.Supervisory, "supervisory", opt.Supervisory, "outputs role for operator in supervisory mode")
+	cmd.Flags().StringVar(&opt.CRD, "crd", opt.CRD, "CRD to generate")
 
 	return cmd
 }
