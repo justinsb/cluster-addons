@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- crd/bases/addons.x-k8s.io_coredns.yaml
+- minimal/role.yaml
+
+bases:
+- minimal/base/
+
+namePrefix: coredns-
+namespace: coredns-system
+
+commonLabels:
+  k8s-app: coredns-operator
