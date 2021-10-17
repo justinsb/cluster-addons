@@ -3,6 +3,7 @@ package convert
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"sort"
 	"strings"
 
@@ -22,6 +23,9 @@ type BuildRoleOptions struct {
 
 	// CRD is the name of the CRD to generate permissions for.
 	CRD string
+
+	// LimitResourceNames specifies that RBAC permissions should restrict to resource names in the manifest.
+	LimitResourceNames bool
 }
 
 func ParseYAMLtoRole(manifestStr string, opt BuildRoleOptions) (string, error) {
@@ -29,6 +33,9 @@ func ParseYAMLtoRole(manifestStr string, opt BuildRoleOptions) (string, error) {
 	objs, err := manifest.ParseObjects(ctx, manifestStr)
 	if err != nil {
 		return "", err
+	}
+	if len(objs.Blobs) != 0 {
+		return "", fmt.Errorf("unable to parse manifest fully")
 	}
 
 	clusterRole := v1.ClusterRole{
@@ -61,11 +68,33 @@ func ParseYAMLtoRole(manifestStr string, opt BuildRoleOptions) (string, error) {
 			clusterRole.Rules = append(clusterRole.Rules, newClusterRole.Rules...)
 		}
 
-		if !kindMap[obj.Group+"::"+obj.Kind] {
+		// needs plural of kind
+		resource := ResourceFromKind(obj.Kind)
+
+		if opt.LimitResourceNames {
+			clusterRole.Rules = append(clusterRole.Rules, v1.PolicyRule{
+				APIGroups:     []string{obj.Group},
+				Resources:     []string{resource},
+				ResourceNames: []string{obj.Name},
+				Verbs:         []string{"update", "delete", "patch"},
+			})
+
+			clusterRole.Rules = append(clusterRole.Rules, v1.PolicyRule{
+				APIGroups: []string{obj.Group},
+				Resources: []string{resource},
+				Verbs:     []string{"create"},
+			})
+
+			clusterRole.Rules = append(clusterRole.Rules, v1.PolicyRule{
+				APIGroups: []string{obj.Group},
+				Resources: []string{resource},
+				Verbs:     []string{"get", "list", "watch"},
+			})
+
+		} else if !kindMap[obj.Group+"::"+obj.Kind] {
 			newRule := v1.PolicyRule{
 				APIGroups: []string{obj.Group},
-				// needs plural of kind
-				Resources: []string{ResourceFromKind(obj.Kind)},
+				Resources: []string{resource},
 				Verbs:     []string{"create", "update", "delete", "get"},
 			}
 			clusterRole.Rules = append(clusterRole.Rules, newRule)
@@ -79,8 +108,18 @@ func ParseYAMLtoRole(manifestStr string, opt BuildRoleOptions) (string, error) {
 		clusterRole.Rules = append(clusterRole.Rules, v1.PolicyRule{
 			APIGroups: []string{gr.Group},
 			Resources: []string{gr.Resource},
+			Verbs:     []string{"get", "list", "patch", "update", "watch"},
+		})
+		clusterRole.Rules = append(clusterRole.Rules, v1.PolicyRule{
+			APIGroups: []string{gr.Group},
+			Resources: []string{gr.Resource + "/status"},
+			Verbs:     []string{"get", "patch", "update"},
 		})
 	}
+
+	clusterRole.Rules = normalizeRules(clusterRole.Rules)
+
+	clusterRole.Rules = combineRBACRules(clusterRole.Rules)
 
 	sort.Slice(clusterRole.Rules, func(i, j int) bool { return ruleLT(&clusterRole.Rules[i], &clusterRole.Rules[j]) })
 
@@ -156,4 +195,66 @@ func firstOrEmpty(s []string) string {
 		return ""
 	}
 	return s[0]
+}
+
+func combineRBACRules(rules []v1.PolicyRule) []v1.PolicyRule {
+	var out []v1.PolicyRule
+
+	ruleMap := make(map[string]v1.PolicyRule)
+
+	for _, rule := range rules {
+		if len(rule.NonResourceURLs) != 0 {
+			out = append(out, rule)
+			continue
+		}
+
+		key := "groups=" + strings.Join(rule.APIGroups, ",")
+		//key += ";resources=" + strings.Join(rule.Resources, ",")
+		key += ";resourceNames=" + strings.Join(rule.ResourceNames, ",")
+		key += ";verbs=" + strings.Join(rule.Verbs, ",")
+
+		existing, found := ruleMap[key]
+		if !found {
+			ruleMap[key] = rule
+			continue
+		}
+
+		existing.Resources = append(existing.Resources, rule.Resources...)
+		ruleMap[key] = existing
+	}
+
+	for _, rule := range ruleMap {
+		out = append(out, rule)
+	}
+
+	return out
+}
+
+func normalizeRules(rules []v1.PolicyRule) []v1.PolicyRule {
+	for i := range rules {
+		rule := &rules[i]
+
+		rule.APIGroups = normalizeStringSlice(rule.APIGroups)
+		rule.NonResourceURLs = normalizeStringSlice(rule.NonResourceURLs)
+		rule.ResourceNames = normalizeStringSlice(rule.ResourceNames)
+		rule.Resources = normalizeStringSlice(rule.Resources)
+		rule.Verbs = normalizeStringSlice(rule.Verbs)
+	}
+
+	return rules
+}
+
+func normalizeStringSlice(in []string) []string {
+	var out []string
+
+	done := make(map[string]bool)
+	for _, s := range in {
+		if done[s] {
+			continue
+		}
+		out = append(out, s)
+	}
+
+	sort.Strings(out)
+	return out
 }

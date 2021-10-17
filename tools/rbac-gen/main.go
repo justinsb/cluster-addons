@@ -58,20 +58,31 @@ func BuildGenerateCommand(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVar(&out, "out", out, "name of output file")
 	cmd.Flags().BoolVar(&opt.Supervisory, "supervisory", opt.Supervisory, "outputs role for operator in supervisory mode")
 	cmd.Flags().StringVar(&opt.CRD, "crd", opt.CRD, "CRD to generate")
+	cmd.Flags().BoolVar(&opt.LimitResourceNames, "limit-resource-names", opt.LimitResourceNames, "Limit to resource names in the manifest")
 
 	return cmd
 }
 
 func RunGenerate(ctx context.Context, yamlFile string, out string, opt convert.BuildRoleOptions) error {
 	//	read yaml file passed in from cmd
-	bytes, err := ioutil.ReadFile(yamlFile)
-	if err != nil {
-		return err
+	in := ""
+	if yamlFile == "-" {
+		b, err := ioutil.ReadAll(os.Stdin)
+		if err != nil {
+			return err
+		}
+		in = string(b)
+	} else {
+		b, err := ioutil.ReadFile(yamlFile)
+		if err != nil {
+			return err
+		}
+		in = string(b)
 	}
 
 	// generate Group and Kind
 
-	output, err := convert.ParseYAMLtoRole(string(bytes), opt)
+	output, err := convert.ParseYAMLtoRole(in, opt)
 	if err != nil {
 		return err
 	}
