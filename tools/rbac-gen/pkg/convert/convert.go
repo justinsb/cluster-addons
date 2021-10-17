@@ -131,3 +131,29 @@ func ResourceFromKind(kind string) string {
 	}
 	return strings.ToLower(kind) + "s"
 }
+
+func ruleLT(l, r *v1.PolicyRule) bool {
+	lGroup := firstOrEmpty(l.APIGroups)
+	rGroup := firstOrEmpty(r.APIGroups)
+	if lGroup != rGroup {
+		return lGroup < rGroup
+	}
+	lResource := firstOrEmpty(l.Resources)
+	rResource := firstOrEmpty(r.Resources)
+	if lResource != rResource {
+		return lResource < rResource
+	}
+	lVerb := firstOrEmpty(l.Verbs)
+	rVerb := firstOrEmpty(r.Verbs)
+	if lVerb != rVerb {
+		return lVerb < rVerb
+	}
+	return false
+}
+
+func firstOrEmpty(s []string) string {
+	if len(s) == 0 {
+		return ""
+	}
+	return s[0]
+}
