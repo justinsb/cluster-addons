@@ -40,8 +40,7 @@ func ParseYAMLtoRole(manifestStr string, opt BuildRoleOptions) (string, error) {
 
 	clusterRole := v1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      opt.Name,
-			Namespace: opt.Namespace,
+			Name: opt.Name,
 		},
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ClusterRole",
@@ -134,8 +133,7 @@ func ParseYAMLtoRole(manifestStr string, opt BuildRoleOptions) (string, error) {
 				APIVersion: "rbac.authorization.k8s.io/v1",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Namespace: opt.Namespace,
-				Name:      opt.Name + "-binding",
+				Name: opt.Name + "-binding",
 			},
 			Subjects: []v1.Subject{
 				{
