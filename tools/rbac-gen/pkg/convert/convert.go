@@ -198,6 +198,12 @@ func firstOrEmpty(s []string) string {
 }
 
 func combineRBACRules(rules []v1.PolicyRule) []v1.PolicyRule {
+	rules = foldResources(rules)
+	rules = foldVerbs(rules)
+	return rules
+}
+
+func foldResources(rules []v1.PolicyRule) []v1.PolicyRule {
 	var out []v1.PolicyRule
 
 	ruleMap := make(map[string]v1.PolicyRule)
@@ -220,6 +226,39 @@ func combineRBACRules(rules []v1.PolicyRule) []v1.PolicyRule {
 		}
 
 		existing.Resources = append(existing.Resources, rule.Resources...)
+		ruleMap[key] = existing
+	}
+
+	for _, rule := range ruleMap {
+		out = append(out, rule)
+	}
+
+	return out
+}
+
+func foldVerbs(rules []v1.PolicyRule) []v1.PolicyRule {
+	var out []v1.PolicyRule
+
+	ruleMap := make(map[string]v1.PolicyRule)
+
+	for _, rule := range rules {
+		if len(rule.NonResourceURLs) != 0 {
+			out = append(out, rule)
+			continue
+		}
+
+		key := "groups=" + strings.Join(rule.APIGroups, ",")
+		key += ";resources=" + strings.Join(rule.Resources, ",")
+		key += ";resourceNames=" + strings.Join(rule.ResourceNames, ",")
+		// key += ";verbs=" + strings.Join(rule.Verbs, ",")
+
+		existing, found := ruleMap[key]
+		if !found {
+			ruleMap[key] = rule
+			continue
+		}
+
+		existing.Verbs = append(existing.Verbs, rule.Verbs...)
 		ruleMap[key] = existing
 	}
 
