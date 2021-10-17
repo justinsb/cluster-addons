@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"k8s.io/klog/v2"
+	"sigs.k8s.io/cluster-addons/tools/kaml/pkg/visitor"
 	"sigs.k8s.io/cluster-addons/tools/kaml/pkg/xform"
 	"sigs.k8s.io/kustomize/kyaml/fn/framework"
 	"sigs.k8s.io/kustomize/kyaml/yaml"
@@ -14,6 +15,8 @@ import (
 
 // ReplaceImage describes a transform that replaces labels.
 type ReplaceImage struct {
+	visitor.Visitor
+
 	Replacements []ImageReplacement `json:"image"`
 }
 
@@ -25,83 +28,30 @@ type ImageReplacement struct {
 
 // Run applies the transform.
 func (opt ReplaceImage) Run(ctx context.Context, resourceList *framework.ResourceList) error {
-	for _, item := range resourceList.Items {
-		if err := opt.visit(item.YNode(), ""); err != nil {
-			return err
+	return visitor.VisitResourceList(resourceList, &opt)
+}
+
+func (opt ReplaceImage) VisitScalar(path visitor.Path, node *yaml.Node) error {
+	if path == ".spec.template.spec.containers[].image" {
+		s, ok := visitor.AsString(node)
+		if !ok {
+			klog.Warningf("non-string value for image: %#v", node)
+			return nil
+		}
+		imageTokens := strings.Split(s, ":")
+		if len(imageTokens) != 2 {
+			klog.Warningf("cannot parse image value %q", s)
+			return nil
+		}
+		for _, replacement := range opt.Replacements {
+			if imageTokens[0] == replacement.Name {
+				node.Value = replacement.NewName + ":" + replacement.NewTag
+				return nil
+			}
 		}
 	}
+	klog.V(4).Infof("path %v", path)
 	return nil
-}
-
-func (opt ReplaceImage) visit(item *yaml.Node, path string) error {
-	switch item.Kind {
-	case yaml.ScalarNode:
-		if path == ".spec.template.spec.containers[].image" {
-			s, ok := asString(item)
-			if !ok {
-				klog.Warningf("non-string value for image: %#v", item)
-				return nil
-			}
-			imageTokens := strings.Split(s, ":")
-			if len(imageTokens) != 2 {
-				klog.Warningf("cannot parse image value %q", s)
-				return nil
-			}
-			for _, replacement := range opt.Replacements {
-				if imageTokens[0] == replacement.Name {
-					item.Value = replacement.NewName + ":" + replacement.NewTag
-					return nil
-				}
-			}
-		}
-		klog.V(4).Infof("path %v", path)
-		return nil
-
-	case yaml.SequenceNode:
-		n := len(item.Content)
-		for i := 0; i < n; i += 2 {
-			v := item.Content[i]
-			childPath := path + "[]"
-			if err := opt.visit(v, childPath); err != nil {
-				return err
-			}
-		}
-		return nil
-
-	case yaml.MappingNode:
-		n := len(item.Content)
-		if n%2 != 0 {
-			return fmt.Errorf("unexpected content length in MappingNode %v", path)
-		}
-		for i := 0; i < n; i += 2 {
-			k := item.Content[i]
-			ks, ok := asString(k)
-			if !ok {
-				klog.Warningf("ignorning non-string MappingNode key at %v %v", path, k)
-				continue
-			}
-			childPath := path + "." + ks
-			v := item.Content[i+1]
-			if err := opt.visit(v, childPath); err != nil {
-				return err
-			}
-		}
-		return nil
-	default:
-		return fmt.Errorf("unhandled yaml node kind %v", item.Kind)
-	}
-}
-
-func asString(n *yaml.Node) (string, bool) {
-	if n.Kind != yaml.ScalarNode {
-		return "", false
-	}
-	if n.Tag == "!!str" || n.Tag == "" {
-		return n.Value, true
-	}
-	klog.Infof("Tag: %v", n.Tag)
-	klog.Infof("Tag: %#v", n)
-	return "", false
 }
 
 // AddReplaceImageCommand creates the cobra.Command.
