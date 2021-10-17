@@ -44,5 +44,7 @@ func BuildRootCommand() *cobra.Command {
 
 	images.AddReplaceImageCommand(rootCmd)
 
+	normalize.AddNormalizeLabelsCommand(rootCmd)
+
 	return rootCmd
 }
