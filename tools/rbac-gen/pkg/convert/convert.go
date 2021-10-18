@@ -24,6 +24,20 @@ type BuildRoleOptions struct {
 
 	// LimitResourceNames specifies that RBAC permissions should restrict to resource names in the manifest.
 	LimitResourceNames bool
+
+	// LimitNamespaces specifies that RBAC permissions should restrict to resource names in the manifest.
+	LimitNamespaces bool
+
+	// Format specifies the format we should write in (yaml or kubebuilder)
+	Format string
+}
+
+type ruleSet struct {
+	rules []v1.PolicyRule
+}
+
+func (r *ruleSet) Add(rules ...v1.PolicyRule) {
+	r.rules = append(r.rules, rules...)
 }
 
 func BuildRole(manifestStr string, opt BuildRoleOptions) ([]runtime.Object, error) {
@@ -38,19 +52,24 @@ func BuildRole(manifestStr string, opt BuildRoleOptions) ([]runtime.Object, erro
 		return nil, fmt.Errorf("unable to parse manifest fully")
 	}
 
-	clusterRole := v1.ClusterRole{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: opt.Name,
-		},
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ClusterRole",
-			APIVersion: "rbac.authorization.k8s.io/v1",
-		},
-	}
+	ruleMap := make(map[string]*ruleSet)
+	ruleMap[""] = &ruleSet{}
+
 	// to deal with duplicates, we keep a map of all the kinds that has been added so far
 	kindMap := make(map[string]bool)
 
 	for _, obj := range objs.Items {
+		ruleSetKey := ""
+		if opt.LimitNamespaces {
+			ruleSetKey = obj.Namespace
+		}
+
+		rules := ruleMap[ruleSetKey]
+		if rules == nil {
+			rules = &ruleSet{}
+			ruleMap[ruleSetKey] = rules
+		}
+
 		// The generated role needs the rules from any role or clusterrole
 		if obj.Kind == "Role" || obj.Kind == "ClusterRole" {
 			if opt.Supervisory {
@@ -64,27 +83,27 @@ func BuildRole(manifestStr string, opt BuildRoleOptions) ([]runtime.Object, erro
 			if err != nil {
 				return nil, err
 			}
-			clusterRole.Rules = append(clusterRole.Rules, newClusterRole.Rules...)
+			rules.Add(newClusterRole.Rules...)
 		}
 
 		// needs plural of kind
 		resource := ResourceFromKind(obj.Kind)
 
 		if opt.LimitResourceNames {
-			clusterRole.Rules = append(clusterRole.Rules, v1.PolicyRule{
+			rules.Add(v1.PolicyRule{
 				APIGroups:     []string{obj.Group},
 				Resources:     []string{resource},
 				ResourceNames: []string{obj.Name},
 				Verbs:         []string{"update", "delete", "patch"},
 			})
 
-			clusterRole.Rules = append(clusterRole.Rules, v1.PolicyRule{
+			rules.Add(v1.PolicyRule{
 				APIGroups: []string{obj.Group},
 				Resources: []string{resource},
 				Verbs:     []string{"create"},
 			})
 
-			clusterRole.Rules = append(clusterRole.Rules, v1.PolicyRule{
+			rules.Add(v1.PolicyRule{
 				APIGroups: []string{obj.Group},
 				Resources: []string{resource},
 				Verbs:     []string{"get", "list", "watch"},
@@ -96,7 +115,7 @@ func BuildRole(manifestStr string, opt BuildRoleOptions) ([]runtime.Object, erro
 				Resources: []string{resource},
 				Verbs:     []string{"create", "update", "delete", "get"},
 			}
-			clusterRole.Rules = append(clusterRole.Rules, newRule)
+			rules.Add(newRule)
 			kindMap[obj.Group+"::"+obj.Kind] = true
 		}
 	}
@@ -104,52 +123,107 @@ func BuildRole(manifestStr string, opt BuildRoleOptions) ([]runtime.Object, erro
 	if opt.CRD != "" {
 		gr := schema.ParseGroupResource(opt.CRD)
 
-		clusterRole.Rules = append(clusterRole.Rules, v1.PolicyRule{
+		// TODO: Should we assume namespace scoped?
+		rules := ruleMap[""]
+
+		rules.Add(v1.PolicyRule{
 			APIGroups: []string{gr.Group},
 			Resources: []string{gr.Resource},
 			Verbs:     []string{"get", "list", "patch", "update", "watch"},
 		})
-		clusterRole.Rules = append(clusterRole.Rules, v1.PolicyRule{
+		rules.Add(v1.PolicyRule{
 			APIGroups: []string{gr.Group},
 			Resources: []string{gr.Resource + "/status"},
 			Verbs:     []string{"get", "patch", "update"},
 		})
 	}
 
-	clusterRole.Rules = normalizeRules(clusterRole.Rules)
+	for ns, rules := range ruleMap {
+		rules.normalize()
 
-	clusterRole.Rules = combineRBACRules(clusterRole.Rules)
-
-	sort.Slice(clusterRole.Rules, func(i, j int) bool { return ruleLT(&clusterRole.Rules[i], &clusterRole.Rules[j]) })
-
-	objects = append(objects, &clusterRole)
-
-	// if saName is passed in, generate YAML for rolebinding
-	if opt.ServiceAccountName != "" {
-		clusterRoleBinding := v1.ClusterRoleBinding{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "ClusterRoleBinding",
-				APIVersion: "rbac.authorization.k8s.io/v1",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name: opt.Name + "-binding",
-			},
-			Subjects: []v1.Subject{
-				{
-					Kind:      "ServiceAccount",
-					Name:      opt.ServiceAccountName,
-					Namespace: opt.Namespace,
+		if ns != "" {
+			role := &v1.Role{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      opt.Name,
+					Namespace: ns,
 				},
-			},
-			RoleRef: v1.RoleRef{
-				APIGroup: "rbac.authorization.k8s.io",
-				Kind:     "ClusterRole",
-				Name:     opt.Name,
-			},
-		}
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Role",
+					APIVersion: "rbac.authorization.k8s.io/v1",
+				},
+				Rules: rules.rules,
+			}
+			objects = append(objects, role)
 
-		objects = append(objects, &clusterRoleBinding)
+			// if saName is passed in, generate YAML for rolebinding
+			if opt.ServiceAccountName != "" {
+				roleBinding := v1.RoleBinding{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "RoleBinding",
+						APIVersion: "rbac.authorization.k8s.io/v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      opt.Name + "-binding",
+						Namespace: ns,
+					},
+					Subjects: []v1.Subject{
+						{
+							Kind:      "ServiceAccount",
+							Name:      opt.ServiceAccountName,
+							Namespace: opt.Namespace,
+						},
+					},
+					RoleRef: v1.RoleRef{
+						APIGroup: "rbac.authorization.k8s.io",
+						Kind:     "Role",
+						Name:     opt.Name,
+					},
+				}
+
+				objects = append(objects, &roleBinding)
+			}
+		} else {
+			role := &v1.ClusterRole{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: opt.Name,
+				},
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "ClusterRole",
+					APIVersion: "rbac.authorization.k8s.io/v1",
+				},
+				Rules: rules.rules,
+			}
+			objects = append(objects, role)
+
+			// if saName is passed in, generate YAML for rolebinding
+			if opt.ServiceAccountName != "" {
+				roleBinding := v1.ClusterRoleBinding{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "ClusterRoleBinding",
+						APIVersion: "rbac.authorization.k8s.io/v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name: opt.Name + "-binding",
+					},
+					Subjects: []v1.Subject{
+						{
+							Kind:      "ServiceAccount",
+							Name:      opt.ServiceAccountName,
+							Namespace: opt.Namespace,
+						},
+					},
+					RoleRef: v1.RoleRef{
+						APIGroup: "rbac.authorization.k8s.io",
+						Kind:     "ClusterRole",
+						Name:     opt.Name,
+					},
+				}
+
+				objects = append(objects, &roleBinding)
+			}
+		}
 	}
+
 	return objects, err
 }
 
@@ -161,6 +235,14 @@ func ResourceFromKind(kind string) string {
 		return strings.ToLower(kind)[:len(kind)-1] + "ies"
 	}
 	return strings.ToLower(kind) + "s"
+}
+
+func (r *ruleSet) normalize() {
+	r.rules = normalizeRules(r.rules)
+
+	r.rules = combineRBACRules(r.rules)
+
+	sort.Slice(r.rules, func(i, j int) bool { return ruleLT(&r.rules[i], &r.rules[j]) })
 }
 
 func ruleLT(l, r *v1.PolicyRule) bool {

@@ -48,6 +48,7 @@ func BuildGenerateCommand(ctx context.Context) *cobra.Command {
 	var opt convert.BuildRoleOptions
 	opt.Name = "generated-role"
 	opt.Namespace = "kube-system"
+	opt.Format = "yaml"
 
 	cmd := &cobra.Command{
 		Use: "generate",
@@ -64,6 +65,9 @@ func BuildGenerateCommand(ctx context.Context) *cobra.Command {
 	cmd.Flags().BoolVar(&opt.Supervisory, "supervisory", opt.Supervisory, "outputs role for operator in supervisory mode")
 	cmd.Flags().StringVar(&opt.CRD, "crd", opt.CRD, "CRD to generate")
 	cmd.Flags().BoolVar(&opt.LimitResourceNames, "limit-resource-names", opt.LimitResourceNames, "Limit to resource names in the manifest")
+	cmd.Flags().BoolVar(&opt.LimitNamespaces, "limit-namespaces", opt.LimitNamespaces, "Limit to namespaces in the manifest")
+
+	cmd.Flags().StringVar(&opt.Format, "format", opt.Format, "Format to write in (yaml, kubebuilder)")
 
 	return cmd
 }
@@ -92,20 +96,32 @@ func RunGenerate(ctx context.Context, yamlFile string, out string, opt convert.B
 		return err
 	}
 
-	y, err := toYAML(objects)
-	if err != nil {
-		return err
-	}
+	var output []byte
+	switch opt.Format {
+	case "yaml":
+		y, err := toYAML(objects)
+		if err != nil {
+			return err
+		}
+		output = y
 
-	var conv KubebuilderConverter
-	if err := conv.VisitObjects(objects); err != nil {
-		return err
+	case "kubebuilder":
+		var conv KubebuilderConverter
+		if err := conv.VisitObjects(objects); err != nil {
+			return err
+		}
+		output = []byte(strings.Join(conv.Rules, "\n"))
+	default:
+		return fmt.Errorf("unknown format %q", opt.Format)
 	}
 
 	if out == "" {
-		_, err = os.Stdout.Write(y)
+		_, err = os.Stdout.Write(output)
+		if err == nil {
+			_, err = os.Stdout.WriteString("\n")
+		}
 	} else {
-		err = ioutil.WriteFile(out, y, 0644)
+		err = ioutil.WriteFile(out, output, 0644)
 	}
 
 	return err
@@ -130,29 +146,38 @@ func toYAML(objects []runtime.Object) ([]byte, error) {
 }
 
 type KubebuilderConverter struct {
+	Rules []string
 }
 
 func (c *KubebuilderConverter) VisitObjects(objects []runtime.Object) error {
 	for _, obj := range objects {
-		if clusterRole, ok := obj.(*v1.ClusterRole); ok {
-			if err := c.visitClusterRole(clusterRole); err != nil {
+		switch obj := obj.(type) {
+		case *v1.ClusterRole:
+			if err := c.visitRules(obj.Rules, ""); err != nil {
 				return err
 			}
-			continue
+		case *v1.Role:
+			if err := c.visitRules(obj.Rules, obj.Namespace); err != nil {
+				return err
+			}
+		case *v1.ClusterRoleBinding, *v1.RoleBinding:
+			// Not kubebuilder
+			klog.Infof("ignoring object of type %T for kubebuilder conversion", obj)
+		default:
+			return fmt.Errorf("unhandled type %T", obj)
 		}
-		return fmt.Errorf("unhandled type %T", obj)
 	}
 	return nil
 }
 
-func (c *KubebuilderConverter) visitClusterRole(obj *v1.ClusterRole) error {
-	for _, rule := range obj.Rules {
-		//+kubebuilder:rbac:groups=addons.kope.io,resources=networkings,verbs=get;list;watch;update;patch
-		//+kubebuilder:rbac:groups=addons.kope.io,resources=networkings/status,verbs=get;update;patch
-
+func (c *KubebuilderConverter) visitRules(rules []v1.PolicyRule, namespace string) error {
+	for _, rule := range rules {
 		def := "//+kubebuilder:rbac:"
 		if len(rule.APIGroups) != 0 {
 			def += "groups=" + strings.Join(rule.APIGroups, ";")
+		}
+		if namespace != "" {
+			def += ",namespace=" + namespace
 		}
 		if len(rule.Resources) != 0 {
 			def += ",resources=" + strings.Join(rule.Resources, ";")
@@ -167,7 +192,7 @@ func (c *KubebuilderConverter) visitClusterRole(obj *v1.ClusterRole) error {
 			def += ",urls=" + strings.Join(rule.NonResourceURLs, ";")
 		}
 
-		klog.Infof("rule: %s", def)
+		c.Rules = append(c.Rules, def)
 	}
 
 	return nil
