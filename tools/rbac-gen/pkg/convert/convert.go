@@ -1,7 +1,6 @@
 package convert
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"sort"
@@ -12,7 +11,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/kubebuilder-declarative-pattern/pkg/patterns/declarative/pkg/manifest"
-	"sigs.k8s.io/yaml"
 )
 
 type BuildRoleOptions struct {
@@ -28,14 +26,16 @@ type BuildRoleOptions struct {
 	LimitResourceNames bool
 }
 
-func ParseYAMLtoRole(manifestStr string, opt BuildRoleOptions) (string, error) {
+func BuildRole(manifestStr string, opt BuildRoleOptions) ([]runtime.Object, error) {
+	var objects []runtime.Object
+
 	ctx := context.Background()
 	objs, err := manifest.ParseObjects(ctx, manifestStr)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	if len(objs.Blobs) != 0 {
-		return "", fmt.Errorf("unable to parse manifest fully")
+		return nil, fmt.Errorf("unable to parse manifest fully")
 	}
 
 	clusterRole := v1.ClusterRole{
@@ -62,7 +62,7 @@ func ParseYAMLtoRole(manifestStr string, opt BuildRoleOptions) (string, error) {
 			// Converting from unstructured to v1.ClusterRole
 			err := runtime.DefaultUnstructuredConverter.FromUnstructured(unstruct.Object, &newClusterRole)
 			if err != nil {
-				return "", err
+				return nil, err
 			}
 			clusterRole.Rules = append(clusterRole.Rules, newClusterRole.Rules...)
 		}
@@ -122,8 +122,7 @@ func ParseYAMLtoRole(manifestStr string, opt BuildRoleOptions) (string, error) {
 
 	sort.Slice(clusterRole.Rules, func(i, j int) bool { return ruleLT(&clusterRole.Rules[i], &clusterRole.Rules[j]) })
 
-	output, err := yaml.Marshal(&clusterRole)
-	buf := bytes.NewBuffer(output)
+	objects = append(objects, &clusterRole)
 
 	// if saName is passed in, generate YAML for rolebinding
 	if opt.ServiceAccountName != "" {
@@ -149,14 +148,9 @@ func ParseYAMLtoRole(manifestStr string, opt BuildRoleOptions) (string, error) {
 			},
 		}
 
-		outputBinding, err := yaml.Marshal(&clusterRoleBinding)
-		if err != nil {
-			return "", err
-		}
-		buf.WriteString("\n---\n\n")
-		buf.Write(outputBinding)
+		objects = append(objects, &clusterRoleBinding)
 	}
-	return buf.String(), err
+	return objects, err
 }
 
 func ResourceFromKind(kind string) string {

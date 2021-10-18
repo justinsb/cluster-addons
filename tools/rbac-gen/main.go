@@ -1,15 +1,20 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	goflags "flag"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
+	v1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/cluster-addons/tools/rbac-gen/pkg/convert"
+	"sigs.k8s.io/yaml"
 )
 
 func main() {
@@ -82,16 +87,88 @@ func RunGenerate(ctx context.Context, yamlFile string, out string, opt convert.B
 
 	// generate Group and Kind
 
-	output, err := convert.ParseYAMLtoRole(in, opt)
+	objects, err := convert.BuildRole(in, opt)
 	if err != nil {
 		return err
 	}
 
+	y, err := toYAML(objects)
+	if err != nil {
+		return err
+	}
+
+	var conv KubebuilderConverter
+	if err := conv.VisitObjects(objects); err != nil {
+		return err
+	}
+
 	if out == "" {
-		fmt.Fprintf(os.Stdout, output)
+		_, err = os.Stdout.Write(y)
 	} else {
-		err = ioutil.WriteFile(out, []byte(output), 0644)
+		err = ioutil.WriteFile(out, y, 0644)
 	}
 
 	return err
+}
+
+func toYAML(objects []runtime.Object) ([]byte, error) {
+	var buf bytes.Buffer
+
+	for i, obj := range objects {
+		if i != 0 {
+			buf.WriteString("\n---\n\n")
+		}
+		b, err := yaml.Marshal(obj)
+		if err != nil {
+			return nil, err
+		}
+
+		buf.Write(b)
+	}
+
+	return buf.Bytes(), nil
+}
+
+type KubebuilderConverter struct {
+}
+
+func (c *KubebuilderConverter) VisitObjects(objects []runtime.Object) error {
+	for _, obj := range objects {
+		if clusterRole, ok := obj.(*v1.ClusterRole); ok {
+			if err := c.visitClusterRole(clusterRole); err != nil {
+				return err
+			}
+			continue
+		}
+		return fmt.Errorf("unhandled type %T", obj)
+	}
+	return nil
+}
+
+func (c *KubebuilderConverter) visitClusterRole(obj *v1.ClusterRole) error {
+	for _, rule := range obj.Rules {
+		//+kubebuilder:rbac:groups=addons.kope.io,resources=networkings,verbs=get;list;watch;update;patch
+		//+kubebuilder:rbac:groups=addons.kope.io,resources=networkings/status,verbs=get;update;patch
+
+		def := "//+kubebuilder:rbac:"
+		if len(rule.APIGroups) != 0 {
+			def += "groups=" + strings.Join(rule.APIGroups, ";")
+		}
+		if len(rule.Resources) != 0 {
+			def += ",resources=" + strings.Join(rule.Resources, ";")
+		}
+		if len(rule.ResourceNames) != 0 {
+			def += ",resourceNames=" + strings.Join(rule.ResourceNames, ";")
+		}
+		if len(rule.Verbs) != 0 {
+			def += ",verbs=" + strings.Join(rule.Verbs, ";")
+		}
+		if len(rule.NonResourceURLs) != 0 {
+			def += ",urls=" + strings.Join(rule.NonResourceURLs, ";")
+		}
+
+		klog.Infof("rule: %s", def)
+	}
+
+	return nil
 }
