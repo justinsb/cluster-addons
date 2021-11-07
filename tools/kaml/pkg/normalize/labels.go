@@ -22,7 +22,7 @@ func (opt NormalizeLabels) Run(ctx context.Context, resourceList *framework.Reso
 	return visitor.VisitResourceList(resourceList, &opt)
 }
 
-func (opt NormalizeLabels) VisitMap(path visitor.Path, node *yaml.Node) error {
+func (opt NormalizeLabels) VisitMap(ctx *visitor.Context, path visitor.Path, m *visitor.KubeMap) error {
 	sortKeys := false
 
 	switch path {
@@ -35,6 +35,8 @@ func (opt NormalizeLabels) VisitMap(path visitor.Path, node *yaml.Node) error {
 	if !sortKeys {
 		return nil
 	}
+
+	node := m.Node()
 
 	n := len(node.Content)
 	if n%2 != 0 {

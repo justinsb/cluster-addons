@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/cluster-addons/tools/kaml/pkg/concat"
 	"sigs.k8s.io/cluster-addons/tools/kaml/pkg/images"
 	"sigs.k8s.io/cluster-addons/tools/kaml/pkg/normalize"
+	"sigs.k8s.io/cluster-addons/tools/kaml/pkg/prefix"
 	"sigs.k8s.io/cluster-addons/tools/kaml/pkg/xform/labels"
 )
 
@@ -45,6 +46,8 @@ func BuildRootCommand() *cobra.Command {
 	images.AddReplaceImageCommand(rootCmd)
 
 	normalize.AddNormalizeLabelsCommand(rootCmd)
+
+	prefix.AddNamePrefixCommand(rootCmd)
 
 	return rootCmd
 }

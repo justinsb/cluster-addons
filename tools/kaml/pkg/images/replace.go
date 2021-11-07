@@ -31,7 +31,7 @@ func (opt ReplaceImage) Run(ctx context.Context, resourceList *framework.Resourc
 	return visitor.VisitResourceList(resourceList, &opt)
 }
 
-func (opt ReplaceImage) VisitScalar(path visitor.Path, node *yaml.Node) error {
+func (opt ReplaceImage) VisitScalar(ctx *visitor.Context, path visitor.Path, node *yaml.Node) error {
 	if path == ".spec.template.spec.containers[].image" {
 		s, ok := visitor.AsString(node)
 		if !ok {

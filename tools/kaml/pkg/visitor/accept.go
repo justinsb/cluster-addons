@@ -9,35 +9,34 @@ import (
 )
 
 func VisitResourceList(resourceList *framework.ResourceList, visitor visitor) error {
-	for _, item := range resourceList.Items {
-		if err := visitNode("", item.YNode(), visitor); err != nil {
-			return err
-		}
-	}
-	return nil
+	ctx := &Context{}
+
+	ctx.EnqueueVisitor(visitor)
+
+	return ctx.visitResourceList(resourceList)
 }
 
-func visitNode(path Path, node *yaml.Node, visitor visitor) error {
+func visitNode(ctx *Context, path Path, node *yaml.Node, visitor visitor) error {
 	switch node.Kind {
 	case yaml.ScalarNode:
-		return visitor.VisitScalar(path, node)
+		return visitor.VisitScalar(ctx, path, node)
 
 	case yaml.SequenceNode:
-		if err := visitor.VisitSequence(path, node); err != nil {
+		if err := visitor.VisitSequence(ctx, path, node); err != nil {
 			return err
 		}
 		n := len(node.Content)
 		for i := 0; i < n; i += 2 {
 			v := node.Content[i]
 			childPath := path + "[]"
-			if err := visitNode(childPath, v, visitor); err != nil {
+			if err := visitNode(ctx, childPath, v, visitor); err != nil {
 				return err
 			}
 		}
 		return nil
 
 	case yaml.MappingNode:
-		if err := visitor.VisitMap(path, node); err != nil {
+		if err := visitor.VisitMap(ctx, path, &KubeMap{node: node}); err != nil {
 			return err
 		}
 		n := len(node.Content)
@@ -53,7 +52,7 @@ func visitNode(path Path, node *yaml.Node, visitor visitor) error {
 			}
 			childPath := string(path) + "." + ks
 			v := node.Content[i+1]
-			if err := visitNode(Path(childPath), v, visitor); err != nil {
+			if err := visitNode(ctx, Path(childPath), v, visitor); err != nil {
 				return err
 			}
 		}

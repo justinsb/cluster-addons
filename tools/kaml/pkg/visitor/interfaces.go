@@ -5,22 +5,28 @@ import (
 )
 
 type visitor interface {
-	VisitSequence(path Path, node *yaml.Node) error
-	VisitMap(path Path, node *yaml.Node) error
-	VisitScalar(path Path, node *yaml.Node) error
+	VisitSequence(ctx *Context, path Path, node *yaml.Node) error
+	VisitMap(ctx *Context, path Path, node *KubeMap) error
+	VisitScalar(ctx *Context, path Path, node *yaml.Node) error
+
+	VisitKubeObject(ctx *Context, obj *KubeObject) error
 }
 
 type Visitor struct {
 }
 
-func (v *Visitor) VisitSequence(path Path, node *yaml.Node) error {
+func (v *Visitor) VisitSequence(ctx *Context, path Path, node *yaml.Node) error {
 	return nil
 }
 
-func (v *Visitor) VisitScalar(path Path, node *yaml.Node) error {
+func (v *Visitor) VisitScalar(ctx *Context, path Path, node *yaml.Node) error {
 	return nil
 }
 
-func (v *Visitor) VisitMap(path Path, node *yaml.Node) error {
+func (v *Visitor) VisitMap(ctx *Context, path Path, node *KubeMap) error {
+	return nil
+}
+
+func (v *Visitor) VisitKubeObject(ctx *Context, obj *KubeObject) error {
 	return nil
 }
