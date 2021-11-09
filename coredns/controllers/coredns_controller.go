@@ -89,6 +89,11 @@ func (r *CoreDNSReconciler) setupReconciler(mgr ctrl.Manager) error {
 			o.Spec.Corefile = corefile
 		}
 
+		if o.Spec.DNSDomain == "" {
+			domain := getDNSDomain()
+			o.Spec.DNSDomain = domain
+		}
+
 		// Check for Corefile Migration
 		corefile, err = corefileMigration(ctx, r.Client, o.Spec.Version, o.Spec.Corefile)
 		if err != nil {
